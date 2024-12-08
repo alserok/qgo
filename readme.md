@@ -8,7 +8,7 @@
 
 ---
 
-## Kafka producer and consumer
+## Kafka
 
 ```go
 package main
