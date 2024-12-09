@@ -11,6 +11,7 @@ const (
 	Kafka = iota
 	Rabbit
 	Redis
+	Nats
 )
 
 type Message struct {
@@ -20,7 +21,7 @@ type Message struct {
 	Partition int32
 }
 
-func (m *Message) DecodeBody(target *any) error {
+func (m *Message) DecodeBody(target any) error {
 	if err := json.Unmarshal(m.Body, target); err != nil {
 		return fmt.Errorf("failed to decode message body: %w", err)
 	}
@@ -33,10 +34,12 @@ type Producer interface {
 	Close() error
 }
 
-func NewProducer(t uint, addr, topic string) Producer {
+func NewProducer(t uint, addr, topic string, customs ...Customizer[any]) Producer {
 	switch t {
 	case Kafka:
 		return newKafkaProducer(addr, topic)
+	case Nats:
+		return newNatsPublisher(addr, topic, customs...)
 	case Redis:
 		return nil
 	case Rabbit:
@@ -51,10 +54,12 @@ type Consumer interface {
 	Close() error
 }
 
-func NewConsumer(t uint, addr, topic string, cfg ...any) Consumer {
+func NewConsumer(t uint, addr, topic string, customs ...Customizer[any]) Consumer {
 	switch t {
 	case Kafka:
-		return newKafkaConsumer(addr, topic, cfg...)
+		return newKafkaConsumer(addr, topic, customs...)
+	case Nats:
+		return newNatsConsumer(addr, topic, customs...)
 	case Redis:
 		return nil
 	case Rabbit:
@@ -64,12 +69,4 @@ func NewConsumer(t uint, addr, topic string, cfg ...any) Consumer {
 	}
 }
 
-type KafkaConsumerConfig struct {
-	Partition int32
-	Offset    int64
-}
-
-const (
-	OffsetNewest = -1
-	OffsetOldest = -2
-)
+type Customizer[T any] func(T)

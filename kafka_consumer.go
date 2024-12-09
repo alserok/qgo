@@ -6,42 +6,32 @@ import (
 	"github.com/IBM/sarama"
 )
 
-func newKafkaConsumer(addr, topic string, consumerCfg ...any) *kafkaConsumer {
+func newKafkaConsumer(addr, topic string, customs ...Customizer[any]) *kafkaConsumer {
 	cfg := sarama.NewConfig()
+
+	cons := kafkaConsumer{
+		topic:     topic,
+		offset:    sarama.OffsetNewest,
+		partition: 0,
+	}
+
+	for _, customizer := range customs {
+		customizer(&cons)
+	}
 
 	c, err := sarama.NewConsumer([]string{addr}, cfg)
 	if err != nil {
 		panic("failed to init kafka consumer: " + err.Error())
 	}
+	cons.c = c
 
-	var (
-		partition int32
-		offset    = sarama.OffsetNewest
-	)
-	if len(consumerCfg) == 1 {
-		consCfg := consumerCfg[0].(KafkaConsumerConfig)
-
-		if consCfg.Partition != 0 {
-			partition = consCfg.Partition
-		}
-
-		if consCfg.Offset == OffsetOldest {
-			offset = consCfg.Offset
-		}
-	}
-
-	pc, err := c.ConsumePartition(topic, partition, offset)
+	pc, err := c.ConsumePartition(topic, cons.partition, cons.offset)
 	if err != nil {
 		panic("failed to consume partition '" + topic + "': " + err.Error())
 	}
+	cons.pc = pc
 
-	return &kafkaConsumer{
-		c:         c,
-		pc:        pc,
-		topic:     topic,
-		offset:    0,
-		partition: 0,
-	}
+	return &cons
 }
 
 type kafkaConsumer struct {

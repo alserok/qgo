@@ -7,31 +7,31 @@ import (
 	"testing"
 	"time"
 
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
+	"github.com/testcontainers/testcontainers-go/modules/nats"
 )
 
-func TestKafka(t *testing.T) {
-	suite.Run(t, new(KafkaSuite))
+func TestNats(t *testing.T) {
+	suite.Run(t, new(NatsSuite))
 }
 
-type KafkaSuite struct {
+type NatsSuite struct {
 	suite.Suite
 
 	addr      string
-	container *kafka.KafkaContainer
+	container *nats.NATSContainer
 }
 
-func (s *KafkaSuite) SetupTest() {
-	s.addr, s.container = s.setupKafka()
+func (s *NatsSuite) SetupTest() {
+	s.addr, s.container = s.setupNATS()
 }
 
-func (s *KafkaSuite) TeardownTest() {
+func (s *NatsSuite) TeardownTest() {
 	s.Require().NoError(s.container.Terminate(context.Background()))
 }
 
-func (s *KafkaSuite) TestDefault() {
-	p := NewProducer(Kafka, s.addr, "test")
-	c := NewConsumer(Kafka, s.addr, "test")
+func (s *NatsSuite) TestDefault() {
+	p := NewProducer(Nats, s.addr, "TEST", WithSubject("a"))
+	c := NewConsumer(Nats, s.addr, "TEST", WithSubject("a"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -51,9 +51,9 @@ func (s *KafkaSuite) TestDefault() {
 	}
 }
 
-func (s *KafkaSuite) TestDefaultWithConsumerCustomizers() {
-	p := NewProducer(Kafka, s.addr, "test")
-	c := NewConsumer(Kafka, s.addr, "test", WithOffset(OffsetOldest), WithPartition(0))
+func (s *NatsSuite) TestCustomizers() {
+	p := NewProducer(Nats, s.addr, "TEST", WithSubject("a"), WithRetryWait(time.Second), WithRetryAttempts(3))
+	c := NewConsumer(Nats, s.addr, "TEST", WithSubject("a"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -73,19 +73,18 @@ func (s *KafkaSuite) TestDefaultWithConsumerCustomizers() {
 	}
 }
 
-func (s *KafkaSuite) setupKafka() (string, *kafka.KafkaContainer) {
+func (s *NatsSuite) setupNATS() (string, *nats.NATSContainer) {
 	ctx := context.Background()
 
-	kafkaContainer, err := kafka.Run(ctx,
-		"confluentinc/confluent-local:7.5.0",
-		kafka.WithClusterID("test-cluster"),
+	natsContainer, err := nats.Run(ctx,
+		"nats:2.9",
 	)
 	s.Require().NoError(err)
-	s.Require().NotNil(kafkaContainer)
-	s.Require().True(kafkaContainer.IsRunning())
+	s.Require().NotNil(natsContainer)
+	s.Require().True(natsContainer.IsRunning())
 
-	port, err := kafkaContainer.MappedPort(ctx, "9093/tcp")
+	port, err := natsContainer.MappedPort(ctx, "4222/tcp")
 	s.Require().NoError(err)
 
-	return fmt.Sprintf("localhost:%s", port.Port()), kafkaContainer
+	return fmt.Sprintf("localhost:%s", port.Port()), natsContainer
 }
