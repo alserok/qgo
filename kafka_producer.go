@@ -7,27 +7,43 @@ import (
 	"time"
 )
 
-func newKafkaProducer(addr, topic string) *kafkaProducer {
+func newKafkaProducer(addr, topic string, customs ...Customizer[any]) *kafkaProducer {
+	prod := kafkaProducer{
+		topic:           topic,
+		requiredAcks:    AckWaitForAll,
+		compression:     CompressionSnappy,
+		returnSuccesses: true,
+		returnErrors:    true,
+		flushFreq:       time.Millisecond * 500,
+	}
+	for _, custom := range customs {
+		custom(&prod)
+	}
+
 	cfg := sarama.NewConfig()
-	cfg.Producer.RequiredAcks = sarama.WaitForAll
-	cfg.Producer.Compression = sarama.CompressionSnappy
-	cfg.Producer.Flush.Frequency = 500 * time.Millisecond
-	cfg.Producer.Return.Errors = true
-	cfg.Producer.Return.Successes = true
+	cfg.Producer.RequiredAcks = sarama.RequiredAcks(prod.requiredAcks)
+	cfg.Producer.Compression = sarama.CompressionCodec(prod.compression)
+	cfg.Producer.Flush.Frequency = prod.flushFreq
+	cfg.Producer.Return.Errors = prod.returnErrors
+	cfg.Producer.Return.Successes = prod.returnSuccesses
 
 	p, err := sarama.NewSyncProducer([]string{addr}, cfg)
 	if err != nil {
 		panic("failed to init kafkaProducer: " + err.Error())
 	}
+	prod.p = p
 
-	return &kafkaProducer{
-		p:     p,
-		topic: topic,
-	}
+	return &prod
 }
 
 type kafkaProducer struct {
 	p sarama.SyncProducer
+
+	requiredAcks    int
+	compression     int
+	returnErrors    bool
+	returnSuccesses bool
+	flushFreq       time.Duration
 
 	topic string
 }

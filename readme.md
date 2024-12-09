@@ -56,6 +56,21 @@ func WithPartition(partition int32) Customizer[any] {
     // ...
 }
 
+// sets RequiredAcks for producer
+func WithRequiredAcks(acks int) Customizer[any]  {
+    // ...
+}
+
+// sets CompressionCodec for producer
+func WithCompression(comp int) Customizer[any]  {
+    // ...
+}
+
+// sets FlushFrequency for producer
+func WithFlushFrequency(freq time.Duration) Customizer[any]  {
+    // ...
+}
+
 ```
 
 ---

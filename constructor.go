@@ -37,7 +37,7 @@ type Producer interface {
 func NewProducer(t uint, addr, topic string, customs ...Customizer[any]) Producer {
 	switch t {
 	case Kafka:
-		return newKafkaProducer(addr, topic)
+		return newKafkaProducer(addr, topic, customs...)
 	case Nats:
 		return newNatsPublisher(addr, topic, customs...)
 	case Redis:
