@@ -52,8 +52,8 @@ func (s *NatsSuite) TestDefault() {
 }
 
 func (s *NatsSuite) TestCustomizers() {
-	p := NewProducer(Nats, s.addr, "TEST", WithSubject("a"), WithRetryWait(time.Second), WithRetryAttempts(3))
 	c := NewConsumer(Nats, s.addr, "TEST", WithSubject("a"))
+	p := NewProducer(Nats, s.addr, "TEST", WithSubject("a"), WithRetryWait(time.Second), WithRetryAttempts(3))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())

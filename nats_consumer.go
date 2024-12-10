@@ -19,29 +19,13 @@ func newNatsConsumer(addr, topic string, customs ...Customizer[any]) *natsConsum
 		panic("failed to connect: " + err.Error())
 	}
 
-	js, err := nc.JetStream()
+	chMessages := make(chan *nats.Msg, 128)
+	sub, err := nc.ChanSubscribe(cons.subject, chMessages)
 	if err != nil {
-		panic("failed to connect to JetStream: " + err.Error())
+		panic("failed to subscribe to channel: " + err.Error())
 	}
-
-	chMessages := make(chan *Message, 100)
-	chErrors := make(chan error, 1)
-
-	cons.chMessages = chMessages
-	cons.chErrors = chErrors
-
-	cc, err := js.Subscribe(cons.subject, func(msg *nats.Msg) {
-		chMessages <- &Message{
-			Body: msg.Data,
-		}
-		if err = msg.Ack(); err != nil {
-			chErrors <- err
-		}
-	}, nats.ManualAck())
-	if err != nil {
-		panic("failed to consume: " + err.Error())
-	}
-	cons.cc = cc
+	cons.cc = sub
+	cons.ch = chMessages
 
 	return &cons
 }
@@ -50,8 +34,7 @@ type natsConsumer struct {
 	cc *nats.Subscription
 	nc *nats.Conn
 
-	chMessages chan *Message
-	chErrors   chan error
+	ch chan *nats.Msg
 
 	topic   string
 	subject string
@@ -59,13 +42,13 @@ type natsConsumer struct {
 
 func (n *natsConsumer) Consume(ctx context.Context) (*Message, error) {
 	select {
-	case msg, ok := <-n.chMessages:
+	case msg, ok := <-n.ch:
 		if !ok {
 			return nil, fmt.Errorf("consumer closed")
 		}
-		return msg, nil
-	case err := <-n.chErrors:
-		return nil, err
+		return &Message{
+			Body: msg.Data,
+		}, nil
 	case <-ctx.Done():
 		return nil, fmt.Errorf("context canceled")
 	}
@@ -77,8 +60,7 @@ func (n *natsConsumer) Close() error {
 		return fmt.Errorf("failed to unsubscribe: %w", err)
 	}
 
-	close(n.chErrors)
-	close(n.chMessages)
+	close(n.ch)
 
 	return nil
 }
