@@ -51,7 +51,7 @@ func (s *NatsSuite) TestDefault() {
 	}
 }
 
-func (s *NatsSuite) TestCustomizers() {
+func (s *NatsSuite) TestWithCustomizers() {
 	c := NewConsumer(Nats, s.addr, "TEST", WithSubject("a"))
 	p := NewProducer(Nats, s.addr, "TEST", WithSubject("a"), WithRetryWait(time.Second), WithRetryAttempts(3))
 	defer func() {

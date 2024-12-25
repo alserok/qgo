@@ -51,7 +51,7 @@ func (s *KafkaSuite) TestDefault() {
 	}
 }
 
-func (s *KafkaSuite) TestDefaultWithConsumerCustomizers() {
+func (s *KafkaSuite) TestWithCustomizers() {
 	p := NewProducer(Kafka, s.addr, "test", WithFlushFrequency(400*time.Millisecond), WithCompression(CompressionGZIP), WithRequiredAcks(AckWaitForAll))
 	c := NewConsumer(Kafka, s.addr, "test", WithOffset(OffsetOldest), WithPartition(0))
 	defer func() {
