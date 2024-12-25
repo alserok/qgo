@@ -26,6 +26,7 @@ func newKafkaProducer(addr, topic string, customs ...Customizer[any]) *kafkaProd
 	cfg.Producer.Flush.Frequency = prod.flushFreq
 	cfg.Producer.Return.Errors = prod.returnErrors
 	cfg.Producer.Return.Successes = prod.returnSuccesses
+	cfg.Producer.Idempotent = prod.idempotent
 
 	p, err := sarama.NewSyncProducer([]string{addr}, cfg)
 	if err != nil {
@@ -43,6 +44,7 @@ type kafkaProducer struct {
 	compression     int
 	returnErrors    bool
 	returnSuccesses bool
+	idempotent      bool
 	flushFreq       time.Duration
 
 	topic string

@@ -18,7 +18,9 @@ type Message struct {
 	Body      []byte
 	ID        string
 	Timestamp time.Time
+
 	Partition int32
+	Ack       func() error
 }
 
 func (m *Message) DecodeBody(target any) error {
@@ -43,7 +45,7 @@ func NewProducer(t uint, addr, topic string, customs ...Customizer[any]) Produce
 	case Redis:
 		return nil
 	case Rabbit:
-		return nil
+		return newRabbitPublisher(addr, topic, customs...)
 	default:
 		panic("invalid Producer type")
 	}
@@ -63,7 +65,7 @@ func NewConsumer(t uint, addr, topic string, customs ...Customizer[any]) Consume
 	case Redis:
 		return nil
 	case Rabbit:
-		return nil
+		return newRabbitConsumer(addr, topic, customs...)
 	default:
 		panic("invalid Consumer type")
 	}
