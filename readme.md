@@ -6,6 +6,7 @@
 
 * [Kafka](#kafka)
 * [Nats](#nats)
+* [Rabbit](#rabbit)
 
 ---
 
@@ -124,5 +125,93 @@ func WithRetryAttempts(attempts int) Customizer[any] {
     // ...
 }
 
+
+```
+
+---
+
+## Rabbit
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/alserok/qgo"
+)
+
+func main() {
+	p := qgo.NewProducer(qgo.Rabbit, "localhost:5672", "test")
+	c := qgo.NewConsumer(qgo.Rabbit, "localhost:5672", "test", qgo.WithAutoAcknowledgement())
+
+	err := p.Produce(context.Background(), &qgo.Message{
+		Body:      []byte("body"),
+	})
+	if err != nil {
+		panic("failed to produce message: " + err.Error())
+	}
+
+	msg, err := c.Consume(context.Background())
+	if err != nil {
+		panic("failed to consume message: " + err.Error())
+	}
+	
+	fmt.Println(msg)
+}
+```
+
+### Customizers
+```go
+
+// sets `noWait` field to true
+func WithNoWait() Customizer[any] {
+    // ...
+}
+
+// sets `exclusive` field to true
+func WithExclusive() Customizer[any] {
+    // ...
+}
+
+// sets `autoDelete` field to true
+func WithAutoDelete() Customizer[any] {
+    // ...
+}
+
+// sets `durable` field to true
+func WithDurable() Customizer[any] {
+    // ...
+}
+
+// sets `exchange` field
+func WithExchange(exchange string) Customizer[any] {
+    // ...
+}
+
+// sets `mandatory` field to true
+func WithMandatory() Customizer[any] {
+    // ...
+}
+
+// sets `immediate` field to true
+func WithImmediate() Customizer[any] {
+    // ...
+}
+
+// sets `consumer` field for the rabbitmq Consume method
+func WithConsumerTag(tag string) Customizer[any] {
+    // ...
+}
+
+// sets `immediate` field to true
+func WithNoLocal() Customizer[any] {
+    // ...
+}
+
+// sets `autoAcknowledgement` field to true, by default you have to use Ack method for the message
+func WithAutoAcknowledgement() Customizer[any] {
+    // ...
+}
 
 ```
