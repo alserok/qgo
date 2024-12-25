@@ -50,6 +50,12 @@ func WithFlushFrequency(freq time.Duration) Customizer[any] {
 	}
 }
 
+func WithIdempotent() Customizer[any] {
+	return func(prod any) {
+		prod.(*kafkaProducer).idempotent = true
+	}
+}
+
 // =========================================================
 // NATS
 
@@ -75,5 +81,68 @@ func WithRetryWait(wait time.Duration) Customizer[any] {
 func WithRetryAttempts(attempts int) Customizer[any] {
 	return func(pub any) {
 		pub.(*natsPublisher).retryAttempts = &attempts
+	}
+}
+
+// =========================================================
+// Rabbit
+
+func WithNoWait() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).noWait = true
+	}
+}
+
+func WithExclusive() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).exclusive = true
+	}
+}
+
+func WithAutoDelete() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).autoDelete = true
+	}
+}
+
+func WithDurable() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).durable = true
+	}
+}
+
+func WithExchange(exchange string) Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).exchange = exchange
+	}
+}
+
+func WithMandatory() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).mandatory = true
+	}
+}
+
+func WithImmediate() Customizer[any] {
+	return func(pub any) {
+		pub.(*rabbitPublisher).immediate = true
+	}
+}
+
+func WithConsumerTag(tag string) Customizer[any] {
+	return func(con any) {
+		con.(*rabbitConsumer).tag = tag
+	}
+}
+
+func WithNoLocal() Customizer[any] {
+	return func(con any) {
+		con.(*rabbitConsumer).noLocal = true
+	}
+}
+
+func WithAutoAcknowledgement() Customizer[any] {
+	return func(con any) {
+		con.(*rabbitConsumer).autoAcknowledgement = true
 	}
 }
