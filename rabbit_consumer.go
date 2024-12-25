@@ -45,8 +45,7 @@ type rabbitConsumer struct {
 	q    amqp.Queue
 	msgs <-chan amqp.Delivery
 
-	topic string
-	tag   string
+	tag string
 
 	durable             bool
 	autoDelete          bool
