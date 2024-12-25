@@ -4,9 +4,29 @@
 
 ---
 
-* [Kafka](#kafka)
-* [Nats](#nats)
-* [Rabbit](#rabbit)
+The same interface for all the queues. You may set up everything how you want with
+customizers in constructors.
+
+```go
+type Producer interface {
+	Produce(ctx context.Context, message *Message) error
+	Close() error
+}
+
+type Consumer interface {
+        Consume(ctx context.Context) (*Message, error)
+        Close() error
+}
+
+```
+
+---
+
+## 🧭 Navigation
+
+* *[Kafka](#kafka)*
+* *[Nats](#nats)*
+* *[Rabbit](#rabbit)*
 
 ---
 
