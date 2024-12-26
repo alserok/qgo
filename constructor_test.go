@@ -7,6 +7,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 	"github.com/testcontainers/testcontainers-go/modules/rabbitmq"
+	"github.com/testcontainers/testcontainers-go/modules/redis"
 	"testing"
 )
 
@@ -52,6 +53,34 @@ func (s *ConstructorSuite) TestNatsConstructor() {
 	s.Require().NotNil(producer)
 	consumer := NewConsumer(Nats, addr, "topic", WithSubjects("subj"))
 	s.Require().NotNil(consumer)
+}
+
+func (s *ConstructorSuite) TestRedisConstructor() {
+	addr, container := s.setupRedis()
+	defer func() {
+		s.Require().NoError(container.Terminate(context.Background()))
+	}()
+
+	producer := NewProducer(Redis, addr, "topic")
+	s.Require().NotNil(producer)
+	consumer := NewConsumer(Redis, addr, "topic")
+	s.Require().NotNil(consumer)
+}
+
+func (s *ConstructorSuite) setupRedis() (string, *redis.RedisContainer) {
+	ctx := context.Background()
+
+	redisContainer, err := redis.Run(ctx,
+		"redis:latest",
+	)
+	s.Require().NoError(err)
+	s.Require().NotNil(redisContainer)
+	s.Require().True(redisContainer.IsRunning())
+
+	port, err := redisContainer.MappedPort(ctx, "6379/tcp")
+	s.Require().NoError(err)
+
+	return fmt.Sprintf("localhost:%s", port.Port()), redisContainer
 }
 
 func (s *ConstructorSuite) setupKafka() (string, *kafka.KafkaContainer) {
