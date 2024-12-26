@@ -1,4 +1,16 @@
-# One Golang library for all message queues
+# 📬 One Golang library for all message queues
+
+---
+
+## 🧭 Navigation
+
+* *[Message](#message)*
+* *[Kafka](#kafka)*
+* *[Nats](#nats)*
+* *[Rabbit](#rabbit)*
+* *[Redis](#redis)*
+
+---
 
     go get github.com/alserok/qgo
 
@@ -22,11 +34,70 @@ type Consumer interface {
 
 ---
 
-## 🧭 Navigation
+## Message
 
-* *[Kafka](#kafka)*
-* *[Nats](#nats)*
-* *[Rabbit](#rabbit)*
+```go
+
+type Message struct {
+        Body      []byte    `json:"body"`
+        ID        string    `json:"id"`
+        Timestamp time.Time `json:"timestamp"`
+	...
+}
+```
+
+### Encoding/Decoding methods
+
+Methods that allow easily encode and decode `message` body.
+```go
+// tries to decode message body to target, if fails returns and error
+func (m *Message) DecodeBody(target any) error {
+    // ...
+}
+
+// tries to encode value to message body, if fails returns and error
+func (m *Message) EncodeToBody(in any) error {
+	// ...
+}
+```
+
+### Queue methods
+
+Methods that change `message` parameters to dynamically customize their processing.
+
+Kafka
+```go
+// dynamically change the partition where message will be produced
+func (m *Message) SetPartition(part int32) {
+    // ...
+}
+```
+
+Rabbit
+```go
+// if you set field `autoAcknowledge` to false then you have to call this method 
+// after consuming the message
+func (m *Message) Ack() error {
+	// ...
+}
+```
+
+Nats
+```go
+// dynamically change the subject where message will be published
+func (m *Message) SetSubject(sub string) {
+	// ...
+}
+```
+
+Redis
+```go
+// dynamically change the channel where message will be published
+func (m *Message) SetChannel(ch string) {
+    // ...
+}
+```
+
 
 ---
 
@@ -130,8 +201,12 @@ func main() {
 ### Customizers
 ```go
 
-// sets subject for producer and consumer 
-func WithSubject(subj string) Customizer[any] {
+// consumer
+// sets subject to consume (requires only one argument)
+//
+// producer
+// adds stream subjects and sets default subject to produce (the one with index 0)
+func WithSubjects(subj ...string) Customizer[any] {
     // ...
 }
 
@@ -232,6 +307,53 @@ func WithNoLocal() Customizer[any] {
 // sets `autoAcknowledgement` field to true, by default you have to use Ack method for the message
 func WithAutoAcknowledgement() Customizer[any] {
     // ...
+}
+
+```
+
+---
+
+## Redis
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/alserok/qgo"
+)
+
+func main() {
+	p := qgo.NewProducer(qgo.Redis, "localhost:6379", "test")
+	c := qgo.NewConsumer(qgo.Redis, "localhost:6379", "test")
+
+	err := p.Produce(context.Background(), &qgo.Message{
+		Body:      []byte("body"),
+	})
+	if err != nil {
+		panic("failed to produce message: " + err.Error())
+	}
+
+	msg, err := c.Consume(context.Background())
+	if err != nil {
+		panic("failed to consume message: " + err.Error())
+	}
+	
+	fmt.Println(msg)
+}
+```
+
+### Customizers
+```go
+// sets password for redis client
+func WithPassword(password string) Customizer[any] {
+	// ...
+}
+
+// sets db for redis client
+func WithDB(db int) Customizer[any] {
+	// ...
 }
 
 ```
