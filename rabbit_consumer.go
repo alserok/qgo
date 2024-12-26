@@ -66,7 +66,7 @@ func (r *rabbitConsumer) Consume(ctx context.Context) (*Message, error) {
 			Body:      msg.Body,
 			ID:        msg.MessageId,
 			Timestamp: msg.Timestamp,
-			Ack: func() error {
+			ack: func() error {
 				if err := msg.Ack(false); err != nil {
 					return fmt.Errorf("failed to acknowledge: %w", err)
 				}

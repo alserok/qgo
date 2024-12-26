@@ -2,6 +2,7 @@ package qgo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -70,6 +71,99 @@ func (s *KafkaSuite) TestWithCustomizers() {
 		msg, err := c.Consume(context.Background())
 		s.Require().NoError(err)
 		s.Require().NotNil(msg)
+	}
+}
+
+func (s *KafkaSuite) TestMessageDecode() {
+	p := NewProducer(Kafka, s.addr, "test")
+	c := NewConsumer(Kafka, s.addr, "test")
+	defer func() {
+		s.Require().NoError(p.Close())
+		s.Require().NoError(c.Close())
+	}()
+
+	messagesAmount := 5
+	for i := range messagesAmount {
+		type body struct {
+			String string
+			Int    int
+			Bool   bool
+			Str    struct {
+				Field string
+			}
+		}
+
+		data := body{
+			String: fmt.Sprintf("number: %d", i),
+			Int:    i,
+			Bool:   i%2 == 0,
+			Str: struct{ Field string }{
+				Field: fmt.Sprintf("Struct field: %d", i),
+			},
+		}
+
+		b, err := json.Marshal(data)
+		s.Require().NoError(err)
+
+		s.Require().NoError(p.Produce(context.Background(), &Message{
+			Body:      b,
+			ID:        fmt.Sprintf("%d", i),
+			Timestamp: time.Now(),
+		}))
+
+		msg, err := c.Consume(context.Background())
+		s.Require().NoError(err)
+		s.Require().NotNil(msg)
+
+		var resData body
+		s.Require().NoError(msg.DecodeBody(&resData))
+		s.Require().Equal(data, resData)
+	}
+}
+
+func (s *KafkaSuite) TestMessageEncode() {
+	p := NewProducer(Kafka, s.addr, "test")
+	c := NewConsumer(Kafka, s.addr, "test")
+	defer func() {
+		s.Require().NoError(p.Close())
+		s.Require().NoError(c.Close())
+	}()
+
+	messagesAmount := 5
+	for i := range messagesAmount {
+		type body struct {
+			String string
+			Int    int
+			Bool   bool
+			Str    struct {
+				Field string
+			}
+		}
+
+		data := body{
+			String: fmt.Sprintf("number: %d", i),
+			Int:    i,
+			Bool:   i%2 == 0,
+			Str: struct{ Field string }{
+				Field: fmt.Sprintf("Struct field: %d", i),
+			},
+		}
+
+		msg := &Message{
+			ID:        fmt.Sprintf("%d", i),
+			Timestamp: time.Now(),
+		}
+		s.Require().NoError(msg.EncodeToBody(data))
+
+		s.Require().NoError(p.Produce(context.Background(), msg))
+
+		msg, err := c.Consume(context.Background())
+		s.Require().NoError(err)
+		s.Require().NotNil(msg)
+
+		var resData body
+		s.Require().NoError(json.Unmarshal(msg.Body, &resData))
+		s.Require().Equal(data, resData)
 	}
 }
 

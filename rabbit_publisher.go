@@ -38,7 +38,7 @@ type rabbitPublisher struct {
 	ch   *amqp.Channel
 	q    amqp.Queue
 
-	exchange string
+	defaultExchange string
 
 	durable    bool
 	autoDelete bool
@@ -50,11 +50,11 @@ type rabbitPublisher struct {
 }
 
 func (r *rabbitPublisher) Produce(ctx context.Context, message *Message) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("context canceled: %w", ctx.Err())
+	if message.exchange == "" {
+		message.exchange = r.defaultExchange
 	}
 
-	err := r.ch.PublishWithContext(ctx, r.exchange, r.q.Name, r.mandatory, r.immediate, amqp.Publishing{
+	err := r.ch.PublishWithContext(ctx, message.exchange, r.q.Name, r.mandatory, r.immediate, amqp.Publishing{
 		ContentType: "text/plain",
 		Body:        message.Body,
 		Timestamp:   message.Timestamp,

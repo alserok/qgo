@@ -60,7 +60,7 @@ func (p *kafkaProducer) Produce(ctx context.Context, message *Message) error {
 		Key:       sarama.StringEncoder(message.ID),
 		Value:     sarama.StringEncoder(message.Body),
 		Timestamp: message.Timestamp,
-		Partition: message.Partition,
+		Partition: message.partition,
 	})
 	if err != nil {
 		return fmt.Errorf("kafka kafkaProducer failed to send message: %w", err)
