@@ -59,13 +59,17 @@ func WithIdempotent() Customizer[any] {
 // =========================================================
 // NATS
 
-func WithSubject(subj string) Customizer[any] {
+func WithSubjects(subjects ...string) Customizer[any] {
 	return func(cons any) {
-		switch c := cons.(type) {
+		switch cp := cons.(type) {
 		case *natsConsumer:
-			c.subject = c.topic + "." + subj
+			cp.subject = cp.topic + "." + subjects[0]
 		case *natsPublisher:
-			c.subject = c.topic + "." + subj
+			for _, subj := range subjects {
+				cp.subjects = append(cp.subjects, cp.topic+"."+subj)
+			}
+
+			cp.defaultSubject = cp.topic + "." + subjects[0]
 		default:
 			panic("invalid customizer")
 		}
@@ -113,7 +117,7 @@ func WithDurable() Customizer[any] {
 
 func WithExchange(exchange string) Customizer[any] {
 	return func(pub any) {
-		pub.(*rabbitPublisher).exchange = exchange
+		pub.(*rabbitPublisher).defaultExchange = exchange
 	}
 }
 
@@ -144,5 +148,30 @@ func WithNoLocal() Customizer[any] {
 func WithAutoAcknowledgement() Customizer[any] {
 	return func(con any) {
 		con.(*rabbitConsumer).autoAcknowledgement = true
+	}
+}
+
+// =========================================================
+// Redis
+
+func WithPassword(password string) Customizer[any] {
+	return func(pubSub any) {
+		switch ps := pubSub.(type) {
+		case *redisConsumer:
+			ps.password = password
+		case *redisPublisher:
+			ps.password = password
+		}
+	}
+}
+
+func WithDB(db int) Customizer[any] {
+	return func(pubSub any) {
+		switch ps := pubSub.(type) {
+		case *redisConsumer:
+			ps.db = db
+		case *redisPublisher:
+			ps.db = db
+		}
 	}
 }
