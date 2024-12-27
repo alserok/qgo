@@ -20,10 +20,12 @@ type RabbitSuite struct {
 
 	addr      string
 	container *rabbitmq.RabbitMQContainer
+	c         RabbitCustomizer
 }
 
 func (s *RabbitSuite) SetupTest() {
 	s.addr, s.container = s.setupRabbit()
+	s.c = NewRabbitCustomizer()
 }
 
 func (s *RabbitSuite) TeardownTest() {
@@ -54,7 +56,7 @@ func (s *RabbitSuite) TestDefault() {
 
 func (s *RabbitSuite) TestWithCustomizers() {
 	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test", WithAutoAcknowledgement())
+	c := NewConsumer(Rabbit, s.addr, "test", s.c.WithAutoAcknowledgement())
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -99,7 +101,7 @@ func (s *RabbitSuite) TestMessageAck() {
 
 func (s *RabbitSuite) TestMessageDecode() {
 	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test", WithAutoAcknowledgement())
+	c := NewConsumer(Rabbit, s.addr, "test", s.c.WithAutoAcknowledgement())
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())

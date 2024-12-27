@@ -49,9 +49,11 @@ func (s *ConstructorSuite) TestNatsConstructor() {
 		s.Require().NoError(container.Terminate(context.Background()))
 	}()
 
-	producer := NewProducer(Nats, addr, "topic", WithSubjects("subj"))
+	c := NewNATSCustomizer()
+
+	producer := NewProducer(Nats, addr, "topic", c.WithSubjects("subj"))
 	s.Require().NotNil(producer)
-	consumer := NewConsumer(Nats, addr, "topic", WithSubjects("subj"))
+	consumer := NewConsumer(Nats, addr, "topic", c.WithSubjects("subj"))
 	s.Require().NotNil(consumer)
 }
 

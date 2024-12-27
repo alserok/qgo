@@ -119,8 +119,10 @@ import (
 )
 
 func main() {
+	cstm := qgo.NewKafkaCustomizer()
+	
 	p := qgo.NewProducer(qgo.Kafka, "localhost:9092", "test")
-	c := qgo.NewConsumer(qgo.Kafka, "localhost:9092", "test", qgo.WithOffset(qgo.OffsetOldest), qgo.WithPartition(0))
+	c := qgo.NewConsumer(qgo.Kafka, "localhost:9092", "test", cstm.WithOffset(qgo.OffsetOldest), cstm.WithPartition(0))
 
 	err := p.Produce(context.Background(), &qgo.Message{
 		Body:      []byte("body"),
@@ -141,6 +143,22 @@ func main() {
 ```
 
 ### Customizers
+
+```go
+type KafkaCustomizer interface {
+    WithOffset(offset int64) Customizer[any]
+    WithPartition(partition int32) Customizer[any]
+    WithRequiredAcks(acks int) Customizer[any]
+    WithCompression(comp int) Customizer[any]
+    WithFlushFrequency(freq time.Duration) Customizer[any]
+    WithIdempotent() Customizer[any]
+}
+
+func NewKafkaCustomizer() KafkaCustomizer {
+    // ...
+}
+```
+
 ```go
 
 // sets offset for consumer (by default Newest)
@@ -184,8 +202,10 @@ import (
 )
 
 func main() {
-	p := qgo.NewProducer(qgo.Nats, "localhost:4222", "test", qgo.WithSubject("a"))
-	c := qgo.NewConsumer(qgo.Nats, "localhost:4222", "test", qgo.WithSubject("a"))
+	cstm := qgo.NewNATSCustomizer()
+	
+	p := qgo.NewProducer(qgo.Nats, "localhost:4222", "test", cstm.WithSubjects("a"))
+	c := qgo.NewConsumer(qgo.Nats, "localhost:4222", "test", cstm.WithSubjects("a"))
 
 	err := p.Produce(context.Background(), &qgo.Message{
 		Body:      []byte("body"),
@@ -204,6 +224,19 @@ func main() {
 ```
 
 ### Customizers
+
+```go
+type NatsCustomizer interface {
+    WithSubjects(subjects ...string) Customizer[any]
+    WithRetryWait(wait time.Duration) Customizer[any]
+    WithRetryAttempts(attempts int) Customizer[any]
+}
+
+func NewNATSCustomizer() NatsCustomizer {
+    // ...
+}
+```
+
 ```go
 
 // consumer
@@ -242,8 +275,10 @@ import (
 )
 
 func main() {
+	cstm := qgo.NewRabbitCustomizer()
+	
 	p := qgo.NewProducer(qgo.Rabbit, "localhost:5672", "test")
-	c := qgo.NewConsumer(qgo.Rabbit, "localhost:5672", "test", qgo.WithAutoAcknowledgement())
+	c := qgo.NewConsumer(qgo.Rabbit, "localhost:5672", "test", cstm.WithAutoAcknowledgement())
 
 	err := p.Produce(context.Background(), &qgo.Message{
 		Body:      []byte("body"),
@@ -262,6 +297,27 @@ func main() {
 ```
 
 ### Customizers
+
+```go
+type RabbitCustomizer interface {
+    WithNoWait() Customizer[any]
+    WithExclusive() Customizer[any]
+    WithAutoDelete() Customizer[any]
+    WithDurable() Customizer[any]
+    WithExchange(exchange string) Customizer[any]
+    WithMandatory() Customizer[any]
+    WithImmediate() Customizer[any]
+    WithConsumerTag(tag string) Customizer[any]
+    WithNoLocal() Customizer[any]
+    WithAutoAcknowledgement() Customizer[any]
+    WithConsumerArguments(args map[string]interface{}) Customizer[any]
+}
+
+func NewRabbitCustomizer() RabbitCustomizer {
+    // ...
+}
+```
+
 ```go
 
 // sets `noWait` field to true
@@ -350,6 +406,22 @@ func main() {
 ```
 
 ### Customizers
+
+```go
+type RedisCustomizer interface {
+	WithPassword(password string) Customizer[any]
+	WithDB(db int) Customizer[any]
+	WithRetries(retries int) Customizer[any]
+	WithTLSConfig(cfg *tls.Config) Customizer[any]
+	WithNetwork(net string) Customizer[any]
+	WithClientName(name string) Customizer[any]
+}
+
+func NewRedisCustomizer() RedisCustomizer {
+    // ...
+}
+```
+
 ```go
 // sets password for redis client
 func WithPassword(password string) Customizer[any] {
@@ -361,4 +433,23 @@ func WithDB(db int) Customizer[any] {
 	// ...
 }
 
+// sets MaxRetries for redis client options
+func (redisCustomizer) WithRetries(retries int) Customizer[any] {
+    // ...
+}
+
+// sets TLSConfig for redis client options
+func (redisCustomizer) WithTLSConfig(cfg *tls.Config) Customizer[any] {
+    // ...
+}
+
+// sets Network for redis client options
+func (redisCustomizer) WithNetwork(net string) Customizer[any] {
+    // ...
+}
+
+// sets ClientName for redis client options
+func (redisCustomizer) WithClientName(name string) Customizer[any] {
+    // ...
+}
 ```

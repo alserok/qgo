@@ -20,10 +20,12 @@ type NatsSuite struct {
 
 	addr      string
 	container *nats.NATSContainer
+	c         NatsCustomizer
 }
 
 func (s *NatsSuite) SetupTest() {
 	s.addr, s.container = s.setupNATS()
+	s.c = NewNATSCustomizer()
 }
 
 func (s *NatsSuite) TeardownTest() {
@@ -31,8 +33,8 @@ func (s *NatsSuite) TeardownTest() {
 }
 
 func (s *NatsSuite) TestDefault() {
-	p := NewProducer(Nats, s.addr, "TEST", WithSubjects("a"))
-	c := NewConsumer(Nats, s.addr, "TEST", WithSubjects("a"))
+	c := NewConsumer(Nats, s.addr, "TEST", s.c.WithSubjects("a"))
+	p := NewProducer(Nats, s.addr, "TEST", s.c.WithSubjects("a"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -53,8 +55,8 @@ func (s *NatsSuite) TestDefault() {
 }
 
 func (s *NatsSuite) TestWithCustomizers() {
-	c := NewConsumer(Nats, s.addr, "TEST", WithSubjects("a"))
-	p := NewProducer(Nats, s.addr, "TEST", WithSubjects("a", "b"), WithRetryWait(time.Second), WithRetryAttempts(3))
+	c := NewConsumer(Nats, s.addr, "TEST", s.c.WithSubjects("a"))
+	p := NewProducer(Nats, s.addr, "TEST", s.c.WithSubjects("a", "b"), s.c.WithRetryWait(time.Second), s.c.WithRetryAttempts(3))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -75,8 +77,8 @@ func (s *NatsSuite) TestWithCustomizers() {
 }
 
 func (s *NatsSuite) TestWithMessageSubject() {
-	c := NewConsumer(Nats, s.addr, "test", WithSubjects("b"))
-	p := NewProducer(Nats, s.addr, "test", WithSubjects("a", "b"))
+	c := NewConsumer(Nats, s.addr, "test", s.c.WithSubjects("b"))
+	p := NewProducer(Nats, s.addr, "test", s.c.WithSubjects("a", "b"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -100,8 +102,8 @@ func (s *NatsSuite) TestWithMessageSubject() {
 }
 
 func (s *NatsSuite) TestMessageDecode() {
-	p := NewProducer(Nats, s.addr, "test", WithSubjects("a"))
-	c := NewConsumer(Nats, s.addr, "test", WithSubjects("a"))
+	c := NewConsumer(Nats, s.addr, "test", s.c.WithSubjects("a"))
+	p := NewProducer(Nats, s.addr, "test", s.c.WithSubjects("a"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -147,8 +149,8 @@ func (s *NatsSuite) TestMessageDecode() {
 }
 
 func (s *NatsSuite) TestMessageEncode() {
-	p := NewProducer(Nats, s.addr, "test", WithSubjects("a"))
-	c := NewConsumer(Nats, s.addr, "test", WithSubjects("a"))
+	c := NewConsumer(Nats, s.addr, "test", s.c.WithSubjects("a"))
+	p := NewProducer(Nats, s.addr, "test", s.c.WithSubjects("a"))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())

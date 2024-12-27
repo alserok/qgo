@@ -20,10 +20,12 @@ type KafkaSuite struct {
 
 	addr      string
 	container *kafka.KafkaContainer
+	c         KafkaCustomizer
 }
 
 func (s *KafkaSuite) SetupTest() {
 	s.addr, s.container = s.setupKafka()
+	s.c = NewKafkaCustomizer()
 }
 
 func (s *KafkaSuite) TeardownTest() {
@@ -53,8 +55,8 @@ func (s *KafkaSuite) TestDefault() {
 }
 
 func (s *KafkaSuite) TestWithCustomizers() {
-	p := NewProducer(Kafka, s.addr, "test", WithFlushFrequency(400*time.Millisecond), WithCompression(CompressionGZIP), WithRequiredAcks(AckWaitForAll))
-	c := NewConsumer(Kafka, s.addr, "test", WithOffset(OffsetOldest), WithPartition(0))
+	p := NewProducer(Kafka, s.addr, "test", s.c.WithFlushFrequency(400*time.Millisecond), s.c.WithCompression(CompressionGZIP), s.c.WithRequiredAcks(AckWaitForAll))
+	c := NewConsumer(Kafka, s.addr, "test", s.c.WithOffset(OffsetOldest), s.c.WithPartition(0))
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
