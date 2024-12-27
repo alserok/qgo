@@ -2,8 +2,7 @@ package qgo
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"crypto/tls"
 	"time"
 )
 
@@ -13,64 +12,6 @@ const (
 	Redis
 	Nats
 )
-
-type Message struct {
-	Body      []byte    `json:"body"`
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-
-	// Kafka message properties
-	partition int32
-
-	// Rabbit message properties
-	ack      func() error
-	exchange string
-
-	// Redis message properties
-	channel string
-
-	// Nats message properties
-	subject string
-}
-
-func (m *Message) SetSubject(sub string) {
-	m.subject = sub
-}
-
-func (m *Message) Ack() error {
-	return m.ack()
-}
-
-func (m *Message) SetExchange(exchange string) {
-	m.exchange = exchange
-}
-
-func (m *Message) SetChannel(ch string) {
-	m.channel = ch
-}
-
-func (m *Message) SetPartition(part int32) {
-	m.partition = part
-}
-
-func (m *Message) DecodeBody(target any) error {
-	if err := json.Unmarshal(m.Body, target); err != nil {
-		return fmt.Errorf("failed to decode message body: %w", err)
-	}
-
-	return nil
-}
-
-func (m *Message) EncodeToBody(in any) error {
-	b, err := json.Marshal(in)
-	if err != nil {
-		return fmt.Errorf("failed to encode to body: %w", err)
-	}
-
-	m.Body = b
-
-	return nil
-}
 
 type Producer interface {
 	Produce(ctx context.Context, message *Message) error
@@ -113,3 +54,57 @@ func NewConsumer(t uint, addr, topic string, customs ...Customizer[any]) Consume
 }
 
 type Customizer[T any] func(T)
+
+type KafkaCustomizer interface {
+	WithOffset(offset int64) Customizer[any]
+	WithPartition(partition int32) Customizer[any]
+	WithRequiredAcks(acks int) Customizer[any]
+	WithCompression(comp int) Customizer[any]
+	WithFlushFrequency(freq time.Duration) Customizer[any]
+	WithIdempotent() Customizer[any]
+}
+
+func NewKafkaCustomizer() KafkaCustomizer {
+	return kafkaCustomizer{}
+}
+
+type RabbitCustomizer interface {
+	WithNoWait() Customizer[any]
+	WithExclusive() Customizer[any]
+	WithAutoDelete() Customizer[any]
+	WithDurable() Customizer[any]
+	WithExchange(exchange string) Customizer[any]
+	WithMandatory() Customizer[any]
+	WithImmediate() Customizer[any]
+	WithConsumerTag(tag string) Customizer[any]
+	WithNoLocal() Customizer[any]
+	WithAutoAcknowledgement() Customizer[any]
+	WithConsumerArguments(args map[string]interface{}) Customizer[any]
+}
+
+func NewRabbitCustomizer() RabbitCustomizer {
+	return rabbitCustomizer{}
+}
+
+type NatsCustomizer interface {
+	WithSubjects(subjects ...string) Customizer[any]
+	WithRetryWait(wait time.Duration) Customizer[any]
+	WithRetryAttempts(attempts int) Customizer[any]
+}
+
+func NewNATSCustomizer() NatsCustomizer {
+	return natsCustomizer{}
+}
+
+type RedisCustomizer interface {
+	WithPassword(password string) Customizer[any]
+	WithDB(db int) Customizer[any]
+	WithRetries(retries int) Customizer[any]
+	WithTLSConfig(cfg *tls.Config) Customizer[any]
+	WithNetwork(net string) Customizer[any]
+	WithClientName(name string) Customizer[any]
+}
+
+func NewRedisCustomizer() RedisCustomizer {
+	return redisCustomizer{}
+}
