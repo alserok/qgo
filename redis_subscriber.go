@@ -2,8 +2,10 @@ package qgo
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 func newRedisConsumer(addr, channel string, customs ...Customizer[any]) *redisConsumer {
@@ -13,17 +15,24 @@ func newRedisConsumer(addr, channel string, customs ...Customizer[any]) *redisCo
 	}
 
 	cl := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: rc.password,
-		DB:       rc.db,
+		Addr:       addr,
+		Password:   rc.password,
+		DB:         rc.db,
+		MaxRetries: rc.maxRetries,
+		TLSConfig:  rc.tlsConfig,
+		Network:    rc.network,
+		ClientName: rc.clientName,
 	})
 	rc.cl = cl
 
-	if err := cl.Ping(context.Background()).Err(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	if err := cl.Ping(ctx).Err(); err != nil {
 		panic("failed to ping: " + err.Error())
 	}
 
-	sub := cl.Subscribe(context.Background(), channel)
+	sub := cl.Subscribe(ctx, channel)
 	rc.sub = sub
 
 	msgs := rc.sub.Channel()
@@ -37,8 +46,12 @@ type redisConsumer struct {
 	sub  *redis.PubSub
 	msgs <-chan *redis.Message
 
-	password string
-	db       int
+	password   string
+	db         int
+	maxRetries int
+	tlsConfig  *tls.Config
+	network    string
+	clientName string
 }
 
 func (r *redisConsumer) Consume(ctx context.Context) (*Message, error) {

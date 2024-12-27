@@ -2,8 +2,10 @@ package qgo
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"time"
 )
 
 func newRedisPublisher(addr, channel string, customs ...Customizer[any]) *redisPublisher {
@@ -15,13 +17,20 @@ func newRedisPublisher(addr, channel string, customs ...Customizer[any]) *redisP
 	}
 
 	cl := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: rp.password,
-		DB:       rp.db,
+		Addr:       addr,
+		Password:   rp.password,
+		DB:         rp.db,
+		MaxRetries: rp.maxRetries,
+		TLSConfig:  rp.tlsConfig,
+		Network:    rp.network,
+		ClientName: rp.clientName,
 	})
 	rp.cl = cl
 
-	if err := cl.Ping(context.Background()).Err(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	if err := cl.Ping(ctx).Err(); err != nil {
 		panic("failed to ping: " + err.Error())
 	}
 
@@ -34,6 +43,10 @@ type redisPublisher struct {
 	defaultChannel string
 	password       string
 	db             int
+	maxRetries     int
+	tlsConfig      *tls.Config
+	network        string
+	clientName     string
 }
 
 func (r *redisPublisher) Produce(ctx context.Context, message *Message) error {
