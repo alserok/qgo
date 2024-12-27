@@ -80,6 +80,11 @@ Rabbit
 func (m *Message) Ack() error {
 	// ...
 }
+
+// dynamically set the exchange
+func (m *Message) SetExchange(exchange string) {
+    // ...
+}
 ```
 
 Nats
