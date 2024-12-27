@@ -20,6 +20,7 @@ func newNatsConsumer(addr, topic string, customs ...Customizer[any]) *natsConsum
 	}
 
 	chMessages := make(chan *nats.Msg, 128)
+
 	sub, err := nc.ChanSubscribe(cons.subject, chMessages)
 	if err != nil {
 		panic("failed to subscribe to channel: " + err.Error())

@@ -5,36 +5,33 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/suite"
+	"github.com/testcontainers/testcontainers-go/modules/redis"
 	"testing"
 	"time"
-
-	"github.com/testcontainers/testcontainers-go/modules/rabbitmq"
 )
 
-func TestRabbit(t *testing.T) {
-	suite.Run(t, new(RabbitSuite))
+func TestRedisSuite(t *testing.T) {
+	suite.Run(t, new(RedisSuite))
 }
 
-type RabbitSuite struct {
+type RedisSuite struct {
 	suite.Suite
 
 	addr      string
-	container *rabbitmq.RabbitMQContainer
-	c         RabbitCustomizer
+	container *redis.RedisContainer
 }
 
-func (s *RabbitSuite) SetupTest() {
-	s.addr, s.container = s.setupRabbit()
-	s.c = NewRabbitCustomizer()
+func (s *RedisSuite) SetupTest() {
+	s.addr, s.container = s.setupRedis()
 }
 
-func (s *RabbitSuite) TeardownTest() {
+func (s *RedisSuite) TeardownTest() {
 	s.Require().NoError(s.container.Terminate(context.Background()))
 }
 
-func (s *RabbitSuite) TestDefault() {
-	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test")
+func (s *RedisSuite) TestDefault() {
+	p := NewProducer(Redis, s.addr, "test")
+	c := NewConsumer(Redis, s.addr, "test")
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -54,9 +51,12 @@ func (s *RabbitSuite) TestDefault() {
 	}
 }
 
-func (s *RabbitSuite) TestWithCustomizers() {
-	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test", s.c.WithAutoAcknowledgement())
+func (s *RedisSuite) TestWithMessageChannel() {
+	defaultProducerChannel := "test"
+	actualChannel := "test1"
+
+	p := NewProducer(Redis, s.addr, defaultProducerChannel)
+	c := NewConsumer(Redis, s.addr, actualChannel)
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -64,11 +64,14 @@ func (s *RabbitSuite) TestWithCustomizers() {
 
 	messagesAmount := 5
 	for i := range messagesAmount {
-		s.Require().NoError(p.Produce(context.Background(), &Message{
+		msg := &Message{
 			Body:      []byte("body"),
 			ID:        fmt.Sprintf("%d", i),
 			Timestamp: time.Now(),
-		}))
+		}
+		msg.SetChannel(actualChannel)
+
+		s.Require().NoError(p.Produce(context.Background(), msg))
 
 		msg, err := c.Consume(context.Background())
 		s.Require().NoError(err)
@@ -76,32 +79,9 @@ func (s *RabbitSuite) TestWithCustomizers() {
 	}
 }
 
-func (s *RabbitSuite) TestMessageAck() {
-	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test")
-	defer func() {
-		s.Require().NoError(p.Close())
-		s.Require().NoError(c.Close())
-	}()
-
-	messagesAmount := 5
-	for i := range messagesAmount {
-		s.Require().NoError(p.Produce(context.Background(), &Message{
-			Body:      []byte("body"),
-			ID:        fmt.Sprintf("%d", i),
-			Timestamp: time.Now(),
-		}))
-
-		msg, err := c.Consume(context.Background())
-		s.Require().NoError(err)
-		s.Require().NotNil(msg)
-		s.Require().NoError(msg.Ack())
-	}
-}
-
-func (s *RabbitSuite) TestMessageDecode() {
-	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test", s.c.WithAutoAcknowledgement())
+func (s *RedisSuite) TestMessageDecode() {
+	p := NewProducer(Redis, s.addr, "test")
+	c := NewConsumer(Redis, s.addr, "test")
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -146,9 +126,9 @@ func (s *RabbitSuite) TestMessageDecode() {
 	}
 }
 
-func (s *RabbitSuite) TestMessageEncode() {
-	p := NewProducer(Rabbit, s.addr, "test")
-	c := NewConsumer(Rabbit, s.addr, "test")
+func (s *RedisSuite) TestMessageEncode() {
+	p := NewProducer(Redis, s.addr, "test")
+	c := NewConsumer(Redis, s.addr, "test")
 	defer func() {
 		s.Require().NoError(p.Close())
 		s.Require().NoError(c.Close())
@@ -192,18 +172,18 @@ func (s *RabbitSuite) TestMessageEncode() {
 	}
 }
 
-func (s *RabbitSuite) setupRabbit() (string, *rabbitmq.RabbitMQContainer) {
+func (s *RedisSuite) setupRedis() (string, *redis.RedisContainer) {
 	ctx := context.Background()
 
-	rabbitContainer, err := rabbitmq.Run(ctx,
-		"rabbitmq:latest",
+	redisContainer, err := redis.Run(ctx,
+		"redis:latest",
 	)
 	s.Require().NoError(err)
-	s.Require().NotNil(rabbitContainer)
-	s.Require().True(rabbitContainer.IsRunning())
+	s.Require().NotNil(redisContainer)
+	s.Require().True(redisContainer.IsRunning())
 
-	port, err := rabbitContainer.MappedPort(ctx, "5672/tcp")
+	port, err := redisContainer.MappedPort(ctx, "6379/tcp")
 	s.Require().NoError(err)
 
-	return fmt.Sprintf("amqp://guest:guest@localhost:%s/", port.Port()), rabbitContainer
+	return fmt.Sprintf("localhost:%s", port.Port()), redisContainer
 }

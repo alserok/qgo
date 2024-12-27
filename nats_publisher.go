@@ -38,7 +38,7 @@ func newNatsPublisher(addr, topic string, customs ...Customizer[any]) *natsPubli
 	if err != nil {
 		_, err = js.AddStream(&nats.StreamConfig{
 			Name:     pub.topic,
-			Subjects: []string{pub.subject},
+			Subjects: pub.subjects,
 		})
 		if err != nil {
 			panic("failed to add stream: " + err.Error())
@@ -52,8 +52,9 @@ type natsPublisher struct {
 	js nats.JetStreamContext
 	nc *nats.Conn
 
-	topic   string
-	subject string
+	topic          string
+	defaultSubject string
+	subjects       []string
 
 	retryWait     *time.Duration
 	retryAttempts *int
@@ -62,11 +63,13 @@ type natsPublisher struct {
 }
 
 func (n *natsPublisher) Produce(ctx context.Context, message *Message) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("context canceled: %w", ctx.Err())
+	if message.subject == "" {
+		message.subject = n.defaultSubject
+	} else {
+		message.subject = n.topic + "." + message.subject
 	}
 
-	_, err := n.js.Publish(n.subject, message.Body, n.opts...)
+	_, err := n.js.Publish(message.subject, message.Body, n.opts...)
 	if err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}

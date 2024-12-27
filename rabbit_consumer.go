@@ -30,7 +30,7 @@ func newRabbitConsumer(addr, topic string, customs ...Customizer[any]) *rabbitCo
 	}
 	rc.q = q
 
-	msgs, err := ch.Consume(rc.q.Name, rc.tag, rc.autoAcknowledgement, rc.exclusive, rc.noLocal, rc.noWait, nil)
+	msgs, err := ch.Consume(rc.q.Name, rc.tag, rc.autoAcknowledgement, rc.exclusive, rc.noLocal, rc.noWait, rc.arguments)
 	if err != nil {
 		panic("failed to init consumer: " + err.Error())
 	}
@@ -47,6 +47,7 @@ type rabbitConsumer struct {
 
 	tag string
 
+	arguments           map[string]any
 	durable             bool
 	autoDelete          bool
 	exclusive           bool
@@ -66,7 +67,7 @@ func (r *rabbitConsumer) Consume(ctx context.Context) (*Message, error) {
 			Body:      msg.Body,
 			ID:        msg.MessageId,
 			Timestamp: msg.Timestamp,
-			Ack: func() error {
+			ack: func() error {
 				if err := msg.Ack(false); err != nil {
 					return fmt.Errorf("failed to acknowledge: %w", err)
 				}
